@@ -1,31 +1,40 @@
 package com.xsasakihaise.hellaselo;
 
+import com.xsasakihaise.hellascontrol.api.CoreCheck;
 import com.xsasakihaise.hellaselo.commands.EloAddMatchCommand;
-import com.xsasakihaise.hellaselo.commands.EloTableCommand;
-import com.xsasakihaise.hellaselo.commands.EloVersionCommand;
 import com.xsasakihaise.hellaselo.commands.EloDependenciesCommand;
 import com.xsasakihaise.hellaselo.commands.EloFeaturesCommand;
+import com.xsasakihaise.hellaselo.commands.EloTableCommand;
+import com.xsasakihaise.hellaselo.commands.EloVersionCommand;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
-import com.xsasakihaise.hellascontrol.api.sidemods.HellasAPIControlElo;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 
 import java.io.File;
 
 @Mod("hellaselo")
 public class HellasElo {
 
-    static {
-        HellasAPIControlElo.verify();
-    }
-
     public static EloConfig config;
     public static EloManager eloManager;
     public static HellasEloInfoConfig infoConfig;
 
     public HellasElo() {
+        CoreCheck.verifyCoreLoaded();
+
+        if (FMLEnvironment.dist == Dist.DEDICATED_SERVER) {
+            CoreCheck.verifyEntitled("hellaselo");
+        }
+
+        if (!ModList.get().isLoaded("hellascontrol")) {
+            return;
+        }
+
         config = new EloConfig();
         eloManager = new EloManager(config);
         infoConfig = new HellasEloInfoConfig();

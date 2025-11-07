@@ -1,5 +1,6 @@
 {
-  "version": "2.1.0",
-  "dependencies": ["Required:","- Forge 36.2.42+", "- HellasControl 1.0.0+", "Optional:", "- Pixelmon", "- HellasForms", "- HellasPatcher", "- HellasDeck"],
+  "version": "2.1.1",
+  "dependencies": ["Required:","- Forge 36.2.42+", "- HellasControl 2.0.0+", "Optional:", "- Pixelmon", "- HellasForms", "- HellasPatcher", "- HellasDeck"],
   "features": ["- Elo tracking", "- Leaderboard Management", "- Tournament Match recording"]
 }
+
