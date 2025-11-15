@@ -11,13 +11,26 @@ import net.minecraft.util.text.StringTextComponent;
 import com.xsasakihaise.hellaselo.EloManager;
 import com.xsasakihaise.hellaselo.HellasElo;
 
+/**
+ * Brigadier command that lets staff manually record the outcome of a competitive match.
+ *
+ * <p>Usage: {@code /hellas elo addmatch <winner> <loser> <remainingPokemon>}</p>
+ */
 public class EloAddMatchCommand {
 
+    /**
+     * Provides usernames cached by {@link com.xsasakihaise.hellaselo.EloManager} for tab completion.
+     */
     public static final SuggestionProvider<CommandSource> PLAYER_SUGGESTIONS = (ctx, builder) -> {
         EloManager manager = HellasElo.eloManager;
         return ISuggestionProvider.suggest(manager.getAllUsernames(), builder);
     };
 
+    /**
+     * Registers the {@code addmatch} sub-command under {@code /hellas elo}.
+     *
+     * @param dispatcher shared Brigadier dispatcher provided in {@link net.minecraftforge.event.RegisterCommandsEvent}.
+     */
     public static void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
                 Commands.literal("hellas")

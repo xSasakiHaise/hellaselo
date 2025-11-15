@@ -12,6 +12,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Metadata file that describes the Elo module (version, dependencies, advertised features).
+ * <p>
+ * The data is primarily used for staff information commands and therefore attempts to load
+ * quickly during construction from an embedded resource before falling back to disk.
+ * </p>
+ */
 public class HellasEloInfoConfig {
 
     private transient final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -24,7 +31,9 @@ public class HellasEloInfoConfig {
     private boolean valid = false;
 
     /**
-     * Lädt die Serverdatei wenn vorhanden, ansonsten versucht die gebündelte Resource.
+     * Loads the server-side metadata file if present or falls back to the bundled resource.
+     *
+     * @param serverRoot server directory that contains the config folder.
      */
     public void load(File serverRoot) {
         File configDir = new File(serverRoot, "config/hellas/elo/");
@@ -58,8 +67,8 @@ public class HellasEloInfoConfig {
     }
 
     /**
-     * Lädt die gebündelte Resource `config/hellaselo.json` vom Classpath.
-     * Wird beim Plugin-Konstruktor aufgerufen, damit Commands sofort korrekte Werte haben.
+     * Loads the bundled {@code config/hellaselo.json} metadata from the classpath.
+     * Invoked during plugin construction so commands can already display version info.
      */
     public void loadDefaultsFromResource() {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("config/hellaselo.json")) {
@@ -82,10 +91,16 @@ public class HellasEloInfoConfig {
         }
     }
 
+    /**
+     * @return {@code true} if meaningful metadata has been loaded.
+     */
     public boolean isValid() {
         return valid;
     }
 
+    /**
+     * Persists the metadata file to disk for operators that want to override defaults.
+     */
     public void save() {
         if (configFile == null) return;
         try (FileWriter writer = new FileWriter(configFile)) {
@@ -95,14 +110,23 @@ public class HellasEloInfoConfig {
         }
     }
 
+    /**
+     * @return semantic version string or {@code null} if none was defined.
+     */
     public String getVersion() {
         return version;
     }
 
+    /**
+     * @return list of dependent Hellas modules this Elo system expects.
+     */
     public String[] getDependencies() {
         return dependencies;
     }
 
+    /**
+     * @return human readable bullet points that describe this module.
+     */
     public String[] getFeatures() {
         return features;
     }
