@@ -10,8 +10,16 @@ import com.xsasakihaise.hellaselo.HellasElo;
 import java.util.Comparator;
 import java.util.Map;
 
+/**
+ * Command that prints a paginated view of the Elo leaderboard.
+ */
 public class EloTableCommand {
 
+    /**
+     * Registers the {@code table} sub-command under {@code /hellas elo}.
+     *
+     * @param dispatcher shared Brigadier dispatcher.
+     */
     public static void register(CommandDispatcher<CommandSource> dispatcher) {
         dispatcher.register(
                 Commands.literal("hellas")
@@ -29,6 +37,13 @@ public class EloTableCommand {
         );
     }
 
+    /**
+     * Sends a simple ASCII table that lists ten entries per page.
+     *
+     * @param src  command source receiving the messages.
+     * @param page one-indexed page number.
+     * @return Brigadier success value.
+     */
     private static int sendLeaderboardPage(CommandSource src, int page) {
         Map<String, Integer> leaderboard = HellasElo.eloManager.getLeaderboard();
 

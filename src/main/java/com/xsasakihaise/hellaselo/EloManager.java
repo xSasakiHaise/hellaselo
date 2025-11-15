@@ -12,6 +12,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Central service that stores and updates player Elo values.
+ * <p>
+ * The manager is intentionally lightweight – it simply keeps two in-memory maps for the
+ * numeric rating and a username cache, serialising both to JSON whenever changes occur.
+ * </p>
+ */
 public class EloManager {
 
     private final Gson gson = new Gson();
@@ -22,10 +29,18 @@ public class EloManager {
     private File cacheFile;
     private EloConfig config;
 
+    /**
+     * @param config tuning values that influence how much Elo is exchanged per match.
+     */
     public EloManager(EloConfig config) {
         this.config = config;
     }
 
+    /**
+     * Loads Elo values and the username cache from disk.
+     *
+     * @param serverRoot folder that contains the {@code config/hellas/elo} directory.
+     */
     public void loadData(File serverRoot) {
         File dataDir = new File(serverRoot, "config/hellas/elo/");
         if (!dataDir.exists()) dataDir.mkdirs();
@@ -52,6 +67,11 @@ public class EloManager {
         }
     }
 
+    /**
+     * Serialises the entire Elo map to disk.
+     * The file is tiny (only storing usernames + rating) and therefore safe to rewrite
+     * on every match update.
+     */
     public void saveData() {
         if (dataFile == null) return;
         try (FileWriter writer = new FileWriter(dataFile)) {
@@ -59,6 +79,9 @@ public class EloManager {
         } catch (IOException e) { e.printStackTrace(); }
     }
 
+    /**
+     * Persists the mapping of UUID -> username that is used for Brigadier suggestions.
+     */
     public void saveUsernameCache() {
         if (cacheFile == null) return;
         try (FileWriter writer = new FileWriter(cacheFile)) {
@@ -73,6 +96,14 @@ public class EloManager {
         }
     }
 
+    /**
+     * Applies the Elo change for a finished match and persists the updated values.
+     *
+     * @param winner     username of the winner.
+     * @param loser      username of the defeated player.
+     * @param remaining  number of Pokémon the winner still has available.
+     * @param serverRoot server root used to resolve username cache persistence.
+     */
     public void addMatch(String winner, String loser, int remaining, File serverRoot) {
         addPlayerIfMissing(winner);
         addPlayerIfMissing(loser);
@@ -81,7 +112,9 @@ public class EloManager {
         int winnerElo = eloMap.getOrDefault(winner, 1000);
         int loserElo = eloMap.getOrDefault(loser, 1000);
 
+        // Classic Elo expected score calculation.
         double expectedWinner = 1.0 / (1 + Math.pow(10, (loserElo - winnerElo) / 400.0));
+        // The delta is the configurable K-factor plus a boost for remaining team members.
         int delta = (int)((config.baseElo + remaining * config.remainingMultiplier) * (1 - expectedWinner));
 
         eloMap.put(winner, winnerElo + delta);
@@ -91,7 +124,13 @@ public class EloManager {
         System.out.println("[HellasElo] " + winner + " won vs " + loser + " | +" + delta + " Elo");
     }
 
+    /**
+     * @return the backing map containing all Elo values; callers should treat it as read-only.
+     */
     public Map<String, Integer> getLeaderboard() { return eloMap; }
 
+    /**
+     * @return array of cached usernames that Brigadier can use for tab-completion.
+     */
     public String[] getAllUsernames() { return usernameCache.values().toArray(new String[0]); }
 }
