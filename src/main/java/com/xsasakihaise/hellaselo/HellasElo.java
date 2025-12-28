@@ -9,8 +9,12 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 
@@ -24,6 +28,11 @@ import java.io.File;
 @Mod("hellaselo")
 public class HellasElo {
 
+    private static final Logger LOGGER = LogManager.getLogger("HellasElo");
+    private static final String ENTITLEMENT_KEY = "hellaselo";
+    private static volatile boolean ENABLED = false;
+    private static volatile String DISABLE_REASON = "UNINITIALIZED";
+
     /** Shared runtime configuration that defines base K-factor values. */
     public static EloConfig config;
     /** Tracks player ratings and persists them to disk. */
@@ -34,20 +43,43 @@ public class HellasElo {
      * dependency on HellasControl is satisfied.
      */
     public HellasElo() {
-        CoreCheck.verifyCoreLoaded();
-
-        if (FMLEnvironment.dist == Dist.DEDICATED_SERVER) {
-            CoreCheck.verifyEntitled("hellaselo");
-        }
-
-        if (!ModList.get().isLoaded("hellascontrol")) {
-            return;
-        }
-
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onCommonSetup);
         config = new EloConfig();
         eloManager = new EloManager(config);
 
         MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    private void onCommonSetup(final FMLCommonSetupEvent event) {
+        event.enqueueWork(this::initGate);
+    }
+
+    private void initGate() {
+        if (FMLEnvironment.dist != Dist.DEDICATED_SERVER) {
+            ENABLED = true;
+            DISABLE_REASON = "OK (non-dedicated)";
+            return;
+        }
+
+        if (!ModList.get().isLoaded("hellascontrol")) {
+            ENABLED = false;
+            DISABLE_REASON = "HellasControl missing";
+            LOGGER.warn("[HellasElo] disabled: {}", DISABLE_REASON);
+            return;
+        }
+
+        try {
+            CoreCheck.verifyCoreLoaded();
+            CoreCheck.verifyEntitled(ENTITLEMENT_KEY);
+
+            ENABLED = true;
+            DISABLE_REASON = "OK";
+            LOGGER.info("[HellasElo] enabled (license OK) entitlement='{}'", ENTITLEMENT_KEY);
+        } catch (Exception e) {
+            ENABLED = false;
+            DISABLE_REASON = "License invalid";
+            LOGGER.warn("[HellasElo] disabled: {} entitlement='{}'", DISABLE_REASON, ENTITLEMENT_KEY, e);
+        }
     }
 
     /**
@@ -57,6 +89,10 @@ public class HellasElo {
      */
     @SubscribeEvent
     public void onServerStart(FMLServerStartingEvent event) {
+        if (!ENABLED) {
+            return;
+        }
+
         File serverRoot = event.getServer().getServerDirectory();
         config.loadConfig(serverRoot);
         eloManager.loadData(serverRoot);
@@ -69,6 +105,10 @@ public class HellasElo {
      */
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
+        if (!ENABLED) {
+            return;
+        }
+
         EloAddMatchCommand.register(event.getDispatcher());
         EloTableCommand.register(event.getDispatcher());
     }
